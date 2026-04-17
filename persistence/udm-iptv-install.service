@@ -1,0 +1,13 @@
+[Unit]
+Description=Ensure that udm-iptv is installed on your device
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+Restart=no
+Environment=DEBIAN_FRONTEND=noninteractive
+ExecStart=/bin/bash /data/udm-iptv/manage.sh on-boot
+
+[Install]
+WantedBy=multi-user.target

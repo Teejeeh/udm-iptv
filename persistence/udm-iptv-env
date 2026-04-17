@@ -1,0 +1,3 @@
+# udm-iptv environment configuration
+# Enable automatic updates on boot
+UDM_IPTV_AUTOUPDATE="true"

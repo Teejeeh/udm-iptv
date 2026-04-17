@@ -1,0 +1,10 @@
+[Unit]
+Description=Ensure that udm-iptv is updated automatically on your device.
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=24h
+Unit=udm-iptv-install.service
+
+[Install]
+WantedBy=multi-user.target
