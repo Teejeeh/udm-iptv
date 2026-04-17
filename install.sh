@@ -58,52 +58,75 @@ PERSIST_ROOT="$( [ -d /data ] && echo /data || echo /mnt/data )"
 PERSIST_DIR="$PERSIST_ROOT/udm-iptv"
 ON_BOOT_DIR="$PERSIST_ROOT/on_boot.d"
 
-mkdir -p "$PERSIST_DIR" "$ON_BOOT_DIR"
+echo "Creating persistence directories: $PERSIST_DIR and $ON_BOOT_DIR"
+mkdir -p "$PERSIST_DIR" "$ON_BOOT_DIR" || {
+    echo "ERROR: Failed to create persistence directories!"
+    exit 1
+}
 
 # Try to copy persistence files from different sources:
 # 1. From installed package (if already in .deb)
 # 2. From local repo (for development/testing)
 # 3. Download from GitHub (fallback)
 
+_files_deployed=false
+
 if [ -d /usr/lib/udm-iptv/persistence ]; then
-    # Files are in the installed package
-    cp -r /usr/lib/udm-iptv/persistence/* "$PERSIST_DIR/"
-    cp /usr/lib/udm-iptv/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/"
-    echo "Persistence scripts deployed from installed package"
-elif [ -d "/tmp/udm-iptv-src/persistence" ]; then
-    # Files available from local source (if install.sh run from repo)
-    cp -r /tmp/udm-iptv-src/persistence/* "$PERSIST_DIR/"
-    cp /tmp/udm-iptv-src/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/"
-    echo "Persistence scripts deployed from local source"
-else
-    # Fall back to downloading from GitHub
+    echo "Found persistence files in installed package, copying..."
+    cp -r /usr/lib/udm-iptv/persistence/* "$PERSIST_DIR/" && \
+    cp /usr/lib/udm-iptv/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/" && \
+    echo "✓ Persistence scripts deployed from installed package" && \
+    _files_deployed=true
+fi
+
+if [ "$_files_deployed" = "false" ] && [ -d "/tmp/udm-iptv-src/persistence" ]; then
+    echo "Found persistence files in local source, copying..."
+    cp -r /tmp/udm-iptv-src/persistence/* "$PERSIST_DIR/" && \
+    cp /tmp/udm-iptv-src/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/" && \
+    echo "✓ Persistence scripts deployed from local source" && \
+    _files_deployed=true
+fi
+
+if [ "$_files_deployed" = "false" ]; then
     echo "Downloading persistence scripts from GitHub..."
     
-    # Try multiple GitHub sources (development fork first, then official)
+    # Try development fork first, then official
     for _github_source in "Teejeeh" "fabianishere"; do
-        _success=true
+        echo "  Trying ${_github_source}/udm-iptv..."
+        
+        # Download each file individually so we can see which fail
+        _download_count=0
+        
         for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
-            curl -sSf -o "$PERSIST_DIR/$_file" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/$_file" 2>/dev/null || {
-                _success=false
-            }
+            if curl -sSf -o "$PERSIST_DIR/$_file" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/$_file" 2>/dev/null; then
+                _download_count=$(((_download_count + 1)))
+            fi
         done
         
         # Try boot script
-        curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/on-boot.d/11-udm-iptv.sh" 2>/dev/null || {
-            _success=false
-        }
+        if curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/on-boot.d/11-udm-iptv.sh" 2>/dev/null; then
+            _download_count=$(((_download_count + 1)))
+        fi
         
-        # If all files downloaded successfully, break
-        if [ "$_success" = "true" ] && [ -f "$PERSIST_DIR/manage.sh" ]; then
-            echo "Persistence scripts downloaded from https://github.com/${_github_source}/udm-iptv"
+        # If we got all 9 files (8 scripts + boot script), we're done
+        if [ $_download_count -eq 9 ]; then
+            echo "✓ Downloaded all persistence scripts from https://github.com/${_github_source}/udm-iptv"
+            _files_deployed=true
             break
+        else
+            echo "  Only got $_download_count/9 files from ${_github_source}, trying next source..."
         fi
     done
-    
-    # Check if any files were downloaded
-    if [ ! -f "$PERSIST_DIR/manage.sh" ]; then
-        echo "Warning: Could not download persistence scripts from GitHub"
-    fi
+fi
+
+# Make all scripts executable
+if [ -f "$PERSIST_DIR/manage.sh" ]; then
+    chmod +x "$PERSIST_DIR"/*.sh "$ON_BOOT_DIR"/*.sh 2>/dev/null || true
+    echo "✓ Made persistence scripts executable"
+fi
+
+if [ "$_files_deployed" = "false" ]; then
+    echo "WARNING: Could not deploy persistence scripts. Continuing anyway..."
 fi
 
 # Make all scripts executable
