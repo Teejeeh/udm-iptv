@@ -79,15 +79,31 @@ else
     # Fall back to downloading from GitHub
     echo "Downloading persistence scripts from GitHub..."
     
-    for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
-        curl -sSf -o "$PERSIST_DIR/$_file" "https://raw.githubusercontent.com/fabianishere/udm-iptv/master/persistence/$_file" || {
-            echo "Warning: Failed to download $PERSIST_DIR/$_file from GitHub"
+    # Try multiple GitHub sources (development fork first, then official)
+    for _github_source in "Teejeeh" "fabianishere"; do
+        _success=true
+        for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
+            curl -sSf -o "$PERSIST_DIR/$_file" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/$_file" 2>/dev/null || {
+                _success=false
+            }
+        done
+        
+        # Try boot script
+        curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "https://raw.githubusercontent.com/${_github_source}/udm-iptv/master/persistence/on-boot.d/11-udm-iptv.sh" 2>/dev/null || {
+            _success=false
         }
+        
+        # If all files downloaded successfully, break
+        if [ "$_success" = "true" ] && [ -f "$PERSIST_DIR/manage.sh" ]; then
+            echo "Persistence scripts downloaded from https://github.com/${_github_source}/udm-iptv"
+            break
+        fi
     done
-    mkdir -p "$ON_BOOT_DIR"
-    curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "https://raw.githubusercontent.com/fabianishere/udm-iptv/master/persistence/on-boot.d/11-udm-iptv.sh" || {
-        echo "Warning: Failed to download boot script from GitHub"
-    }
+    
+    # Check if any files were downloaded
+    if [ ! -f "$PERSIST_DIR/manage.sh" ]; then
+        echo "Warning: Could not download persistence scripts from GitHub"
+    fi
 fi
 
 # Make all scripts executable
