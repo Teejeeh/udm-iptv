@@ -19,6 +19,8 @@ if command -v unifi-os > /dev/null 2>&1; then
 fi
 
 UDM_IPTV_VERSION=3.0.6
+UDM_IPTV_BRANCH="${UDM_IPTV_BRANCH:-master}"
+UDM_IPTV_RAW_BASE="https://raw.githubusercontent.com/fabianishere/udm-iptv/${UDM_IPTV_BRANCH}"
 
 dest=$(mktemp -d)
 
@@ -49,3 +51,28 @@ echo
 echo "Use the following command to reconfigure the script:"
 echo
 printf "\t udm-iptv reconfigure\n"
+
+echo
+echo "Setting up persistent installation..."
+
+# v1 uses /mnt/data, v2+ uses /data
+PERSIST_ROOT="$( [ -d /data ] && echo /data || echo /mnt/data )"
+PERSIST_DIR="$PERSIST_ROOT/udm-iptv"
+ON_BOOT_DIR="$PERSIST_ROOT/on_boot.d"
+
+mkdir -p "$PERSIST_DIR" "$ON_BOOT_DIR"
+
+# Download all persistence files
+for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
+    curl -sSf -o "$PERSIST_DIR/$_file" "$UDM_IPTV_RAW_BASE/persistence/$_file"
+done
+curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "$UDM_IPTV_RAW_BASE/persistence/on-boot.d/11-udm-iptv.sh"
+chmod +x "$PERSIST_DIR/manage.sh" "$PERSIST_DIR/unios_1.x.sh" "$PERSIST_DIR/unios_2.x.sh" \
+         "$PERSIST_DIR/install-noninteractive.sh" "$ON_BOOT_DIR/11-udm-iptv.sh"
+
+# Symlink /etc/udm-iptv.conf to persistent storage
+PERSIST_CONF="$PERSIST_DIR/udm-iptv.conf"
+[ ! -f "$PERSIST_CONF" ] && [ -f /etc/udm-iptv.conf ] && cp -a /etc/udm-iptv.conf "$PERSIST_CONF"
+[ ! -L /etc/udm-iptv.conf ] && ln -sf "$PERSIST_CONF" /etc/udm-iptv.conf
+
+echo "Configuration will persist across OS updates at $PERSIST_CONF"
