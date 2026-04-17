@@ -1,6 +1,6 @@
 # IPTV on UniFi OS
 
-This document describes how to set up IPTV on UniFi routing devices based on 
+This document describes how to set up IPTV on UniFi routing devices based on
 UniFi OS, such as the UniFi Dream Machine (UDM) or the UniFi Dream Router (UDR).
 These instructions have been tested with the IPTV network from KPN
 (ISP in the Netherlands).
@@ -72,6 +72,7 @@ Below, we describe the steps for KPN. Feel free to update this document with the
 steps necessary for your provider.
 
 ### KPN
+
 If you are a customer of KPN, you can set up the WAN connection as follows:
 
 1. In your UniFi Dashboard, go to **Settings > Internet**.
@@ -96,21 +97,23 @@ additional DHCP options. You can add these DHCP options as follows:
 ## Configuring Helper Tool
 
 Next, we will use the udm-iptv package to get IPTV working on your LAN.
-This package uses [igmpproxy](https://github.com/pali/igmpproxy) to route 
+This package uses [igmpproxy](https://github.com/pali/igmpproxy) to route
 multicast IPTV traffic between WAN and LAN.
 
 ### Installation
+
 SSH into your machine and execute the commands below in UniFi OS (not in UbiOS).
+
 ```bash
 sh -c "$(curl https://raw.githubusercontent.com/fabianishere/udm-iptv/master/install.sh -sSf)"
 ```
 
 This script will install the `udm-iptv` package onto your device.
 The installation process supports various pre-defined configuration profiles for
-popular IPTV providers. Below is a list of supported IPTV providers: 
+popular IPTV providers. Below is a list of supported IPTV providers:
 
 |  Provider | Country | Supported                                                                                                           |
-|----------:|:-------:|---------------------------------------------------------------------------------------------------------------------|
+| --------: | :-----: | ------------------------------------------------------------------------------------------------------------------- |
 |       KPN |   NL    | Yes                                                                                                                 |
 |    XS4ALL |   NL    | Yes                                                                                                                 |
 |     Tweak |   NL    | Yes                                                                                                                 |
@@ -127,7 +130,7 @@ popular IPTV providers. Below is a list of supported IPTV providers:
 |    PostTV |   LU    | [Manual configuration necessary](https://github.com/fabianishere/udm-iptv/discussions/86#discussioncomment-2345968) |
 
 If your ISP is not supported, you may select the _Custom_ profile, which allows
-you manually configure the package to your needs. 
+you manually configure the package to your needs.
 We appreciate if you share the configuration so others can also benefit.
 See the [profiles](profiles) directory for examples of existing configuration
 profiles.
@@ -148,39 +151,90 @@ not persist across firmware updates depending on the type of upgrade
 (see [#120](https://github.com/fabianishere/udm-iptv/issues/120)).
 
 ### Configuration
+
 You can modify the configuration of the service interactively as follows:
+
 ```bash
 udm-iptv configure
 ```
+
 See below for a reference of the available options to configure:
 
-| Option                | Description                                                                                             |
-|-----------------------|---------------------------------------------------------------------------------------------------------|
-| IPTV_WAN_INTERFACE    | Interface on which IPTV traffic enters the router                                                       |
-| IPTV_WAN_RANGES       | IP ranges from which the IPTV traffic originates (separated by spaces)                                  |
-| IPTV_WAN_VLAN         | ID of VLAN which carries IPTV traffic (use 0 if no VLAN is used)                                        |
-| IPTV_WAN_DHCP         | Boolean to indicate whether DHCP is enabled on the IPTV WAN (VLAN) interface                            |
-| IPTV_WAN_DHCP_OPTIONS | [DHCP options](https://busybox.net/downloads/BusyBox.html#udhcpc) to send when requesting an IP address |
-| IPTV_WAN_STATIC_IP    | Static IP address to assign to the IPTV WAN (VLAN) interface (if DHCP is disabled)                      |
-| IPTV_WAN_MAC          | Custom MAC address to assign to the IPTV WAN VLAN interface                                             |
-| IPTV_LAN_INTERFACES   | Interfaces on which IPTV should be made available                                                       |
-| IPTV_IGMPPROXY_DEBUG  | Enable debugging for igmpproxy                                                                          |
+| Option                            | Description                                                                                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| IPTV_WAN_INTERFACE                | Interface on which IPTV traffic enters the router                                                                                                                |
+| IPTV_WAN_RANGES                   | IP ranges from which the IPTV traffic originates (separated by spaces)                                                                                           |
+| IPTV_WAN_VLAN                     | ID of VLAN which carries IPTV traffic (use 0 if no VLAN is used)                                                                                                 |
+| IPTV_WAN_DHCP                     | Boolean to indicate whether DHCP is enabled on the IPTV WAN (VLAN) interface                                                                                     |
+| IPTV_WAN_DHCP_OPTIONS             | [DHCP options](https://busybox.net/downloads/BusyBox.html#udhcpc) to send when requesting an IP address                                                          |
+| IPTV_WAN_STATIC_IP                | Static IP address to assign to the IPTV WAN (VLAN) interface (if DHCP is disabled)                                                                               |
+| IPTV_WAN_MAC                      | Custom MAC address to assign to the IPTV WAN VLAN interface                                                                                                      |
+| IPTV_LAN_INTERFACES               | Interfaces on which IPTV should be made available                                                                                                                |
+| IPTV_IGMPPROXY_DEBUG              | Enable debugging for igmpproxy                                                                                                                                   |
 | IPTV_IGMPPROXY_DISABLE_QUICKLEAVE | Boolean to disables the quickleave feature for the IGMP Proxy. Set this to true if you have more than one IPTV decoder. Supported by both improxy and igmpproxy. |
 
 The configuration is written to `/etc/udm-iptv.conf` (within UniFi OS).
 
 ### Upgrading
+
 Use the following command to upgrade `udm-iptv`:
+
 ```bash
 udm-iptv upgrade
 ```
+
 If that command does not exist, please re-run the installation script.
 
 ### Removal
+
 To fully remove an `udm-iptv` installation from your UniFi device, run the follow command:
+
 ```bash
 udm-iptv uninstall
 ```
+
+### Persistent Installation (UniFi OS v2+)
+
+To ensure udm-iptv persists across device updates, use the scripts in the `persistence/` directory.
+
+1. **Copy the boot script** to your device:
+
+    ```bash
+    scp persistence/on-boot.d/11-udm-iptv.sh <device>:/data/on_boot.d/
+    ```
+
+2. **Copy the management files** to your device:
+
+    ```bash
+    scp -r persistence/* <device>:/data/udm-iptv/
+    ```
+
+3. **Make scripts executable** on the device:
+
+    ```bash
+    ssh <device> 'chmod +x /data/udm-iptv/*.sh /data/on_boot.d/*.sh'
+    ```
+
+4. **Verify installation** on the device:
+    ```bash
+    ssh <device> '/data/udm-iptv/manage.sh status'
+    ```
+
+#### Available Commands
+
+```bash
+/data/udm-iptv/manage.sh status        # Check service status
+/data/udm-iptv/manage.sh restart       # Restart service
+/data/udm-iptv/manage.sh update        # Check for and apply updates
+/data/udm-iptv/manage.sh on-boot       # Run boot-time setup (automatic)
+```
+
+#### How It Works
+
+- **Config Persistence**: Configuration at `/etc/udm-iptv.conf` is symlinked to `/data/udm-iptv/udm-iptv.conf` which survives OS updates
+- **Boot Recovery**: On each device boot, `11-udm-iptv.sh` runs and ensures udm-iptv is installed
+- **Auto-Updates**: A systemd timer checks for updates every 24 hours
+- **Future-Proof**: Supports UniFi OS v2+ without code changes (uses version comparison `-ge 2`)
 
 ## Troubleshooting
 
@@ -196,30 +250,34 @@ instructions before opening a discussion.
 3. **If you have more than one IPTV decoder, disable the quickleave feature**
    Quickleave is enabled in the default configuration for improxy (the default IGMP proxy) and igmpproxy. If you have multiple IPTV decoders, quickleave will stop a stream for all decoders when just one decoder changes to a different stream.
 4. **Check if your kernel supports multicast routing**  
-   If `MRT_INIT failed; Errno(92): Protocol not available` appears in 
+   If `MRT_INIT failed; Errno(92): Protocol not available` appears in
    diagnostics, your kernel does not support multicast routing.
 5. **Check if your issue has been reported already**  
    Use the GitHub search functionality to check if your issue has already been
    reported before.
 
 ### Getting Help or Reporting an Issue
+
 If your issues persist, you may seek help on our [Discussions](https://github.com/fabianishere/udm-iptv/discussions) page.
 Please keep [GitHub Issues](https://github.com/fabianishere/udm-iptv/issues)
 only for bugs or feature requests related to the project (no configuration-related issues).
 
 When opening a discussion or reporting an issue, **please share the name of your
 ISP as well as the diagnostics reported by our diagnostic tool**:
+
 ```bash
 udm-iptv diagnose
 ```
 
 ## Contributing
+
 Questions, suggestions and contributions are welcome and appreciated!
 You can contribute in various meaningful ways:
 
-* Report a bug through [GitHub issues](https://github.com/fabianishere/udm-iptv/issues).
-* Contribute improvements to the documentation (e.g., configuration for other ISPs).
-* Help answer questions on our [Discussions](https://github.com/fabianishere/udm-iptv/discussions) page.
+- Report a bug through [GitHub issues](https://github.com/fabianishere/udm-iptv/issues).
+- Contribute improvements to the documentation (e.g., configuration for other ISPs).
+- Help answer questions on our [Discussions](https://github.com/fabianishere/udm-iptv/discussions) page.
 
 ## License
+
 The code is released under the GPLv2 license. See [COPYING.txt](/COPYING.txt).
