@@ -9,6 +9,24 @@
 case "$1" in
     purge)
         rm -rf /var/cache/udm-iptv
+        
+        # Clean up persistent installation files
+        # Only remove the symlink, not the persistent config (user may have modified it)
+        if [ -L /etc/udm-iptv.conf ]; then
+            rm -f /etc/udm-iptv.conf
+        fi
+        
+        # Remove boot script from on_boot.d (works for both v1 and v2+)
+        for persist_root in /data /mnt/data; do
+            if [ -d "$persist_root/on_boot.d" ]; then
+                rm -f "$persist_root/on_boot.d/11-udm-iptv.sh"
+            fi
+            
+            # Note: We do NOT remove /data/udm-iptv or /mnt/data/udm-iptv
+            # to preserve user's persistent configuration and settings.
+            # Users can manually remove it if desired.
+        done
+        
         if [ -e /usr/share/debconf/confmodule ]
         then
                 # Source debconf library and purge db
