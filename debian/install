@@ -2,6 +2,7 @@ README.md usr/share/doc/udm-iptv
 debian/copyright usr/share/doc/udm-iptv
 udm-iptvd usr/lib/udm-iptv
 profiles usr/lib/udm-iptv
+persistence usr/lib/udm-iptv
 udm-iptv usr/bin
 udm-iptv-diag usr/bin
 udhcpc.hook usr/lib/udm-iptv

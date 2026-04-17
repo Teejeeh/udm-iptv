@@ -55,8 +55,7 @@ _udm_iptv_stop() {
 
 _udm_iptv_install() {
     logger "udm-iptv: installing from GitHub..."
-    _BRANCH="${UDM_IPTV_BRANCH:-master}"
-    curl -sSf "https://raw.githubusercontent.com/fabianishere/udm-iptv/${_BRANCH}/install.sh" | sh
+    curl -sSf https://raw.githubusercontent.com/fabianishere/udm-iptv/master/install.sh | sh
     logger "udm-iptv: installation completed"
 }
 

@@ -19,8 +19,6 @@ if command -v unifi-os > /dev/null 2>&1; then
 fi
 
 UDM_IPTV_VERSION=3.0.6
-UDM_IPTV_BRANCH="${UDM_IPTV_BRANCH:-master}"
-UDM_IPTV_RAW_BASE="https://raw.githubusercontent.com/fabianishere/udm-iptv/${UDM_IPTV_BRANCH}"
 
 dest=$(mktemp -d)
 
@@ -62,13 +60,15 @@ ON_BOOT_DIR="$PERSIST_ROOT/on_boot.d"
 
 mkdir -p "$PERSIST_DIR" "$ON_BOOT_DIR"
 
-# Download all persistence files
-for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
-    curl -sSf -o "$PERSIST_DIR/$_file" "$UDM_IPTV_RAW_BASE/persistence/$_file"
-done
-curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "$UDM_IPTV_RAW_BASE/persistence/on-boot.d/11-udm-iptv.sh"
-chmod +x "$PERSIST_DIR/manage.sh" "$PERSIST_DIR/unios_1.x.sh" "$PERSIST_DIR/unios_2.x.sh" \
-         "$PERSIST_DIR/install-noninteractive.sh" "$ON_BOOT_DIR/11-udm-iptv.sh"
+# Copy persistence files from package
+if [ -d /usr/lib/udm-iptv/persistence ]; then
+    cp -r /usr/lib/udm-iptv/persistence/* "$PERSIST_DIR/"
+    cp /usr/lib/udm-iptv/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/"
+    chmod +x "$PERSIST_DIR"/*.sh "$ON_BOOT_DIR"/*.sh
+    echo "Persistence scripts deployed from package"
+else
+    echo "Warning: persistence scripts not found in package"
+fi
 
 # Symlink /etc/udm-iptv.conf to persistent storage
 PERSIST_CONF="$PERSIST_DIR/udm-iptv.conf"
