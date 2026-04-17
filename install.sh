@@ -60,15 +60,38 @@ ON_BOOT_DIR="$PERSIST_ROOT/on_boot.d"
 
 mkdir -p "$PERSIST_DIR" "$ON_BOOT_DIR"
 
-# Copy persistence files from package
+# Try to copy persistence files from different sources:
+# 1. From installed package (if already in .deb)
+# 2. From local repo (for development/testing)
+# 3. Download from GitHub (fallback)
+
 if [ -d /usr/lib/udm-iptv/persistence ]; then
+    # Files are in the installed package
     cp -r /usr/lib/udm-iptv/persistence/* "$PERSIST_DIR/"
     cp /usr/lib/udm-iptv/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/"
-    chmod +x "$PERSIST_DIR"/*.sh "$ON_BOOT_DIR"/*.sh
-    echo "Persistence scripts deployed from package"
+    echo "Persistence scripts deployed from installed package"
+elif [ -d "/tmp/udm-iptv-src/persistence" ]; then
+    # Files available from local source (if install.sh run from repo)
+    cp -r /tmp/udm-iptv-src/persistence/* "$PERSIST_DIR/"
+    cp /tmp/udm-iptv-src/persistence/on-boot.d/11-udm-iptv.sh "$ON_BOOT_DIR/"
+    echo "Persistence scripts deployed from local source"
 else
-    echo "Warning: persistence scripts not found in package"
+    # Fall back to downloading from GitHub
+    echo "Downloading persistence scripts from GitHub..."
+    
+    for _file in manage.sh unios_1.x.sh unios_2.x.sh install-noninteractive.sh udm-iptv-env udm-iptv-install.service udm-iptv-install.timer; do
+        curl -sSf -o "$PERSIST_DIR/$_file" "https://raw.githubusercontent.com/fabianishere/udm-iptv/master/persistence/$_file" || {
+            echo "Warning: Failed to download $PERSIST_DIR/$_file from GitHub"
+        }
+    done
+    mkdir -p "$ON_BOOT_DIR"
+    curl -sSf -o "$ON_BOOT_DIR/11-udm-iptv.sh" "https://raw.githubusercontent.com/fabianishere/udm-iptv/master/persistence/on-boot.d/11-udm-iptv.sh" || {
+        echo "Warning: Failed to download boot script from GitHub"
+    }
 fi
+
+# Make all scripts executable
+chmod +x "$PERSIST_DIR"/*.sh "$ON_BOOT_DIR"/*.sh 2>/dev/null || true
 
 # Symlink /etc/udm-iptv.conf to persistent storage
 PERSIST_CONF="$PERSIST_DIR/udm-iptv.conf"
